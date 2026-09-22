@@ -77,14 +77,21 @@ case "$CONCLUSION" in
     ;;
 esac
 
-# 3) Kemas kini clean clone. Kerja belum-commit di site-staging TIDAK terlibat.
-git -C "$REPO" reset --quiet --hard "$REMOTE"
-git -C "$REPO" clean --quiet -fd
+# 3)+4) Kemas kini clone DAN ujian dalam SATU gerbang.
+#
+# Kenapa satu gerbang dan bukan dua: sebarang kegagalan selepas reset --hard
+# (git clean, ujian, apa-apa) mesti MEMULANGKAN pointer. Kalau tidak clone kekal
+# di $REMOTE, pukulan seterusnya log "tiada commit baharu" dan senyap-senyap
+# TIDAK PERNAH deploy lagi — kegagalan yang kelihatan sihat.
+update_and_test() {
+  git -C "$REPO" reset --quiet --hard "$REMOTE" || return 1
+  git -C "$REPO" clean --quiet -fd || return 1
+  run_tests
+}
 
-# 4) Ujian setempat. Gagal => pulangkan pointer supaya pukulan seterusnya cuba lagi.
-if ! run_tests; then
+if ! update_and_test; then
   git -C "$REPO" reset --quiet --hard "$LOCAL"
-  log "RALAT: ujian setempat gagal untuk $(short "$REMOTE") — deploy dibatalkan, clone dipulangkan"
+  log "RALAT: kemas kini/ujian gagal untuk $(short "$REMOTE") — clone dipulangkan, akan cuba semula"
   exit 1
 fi
 log "ujian setempat lulus"
