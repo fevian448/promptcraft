@@ -1,0 +1,151 @@
+name: Uptime Monitor
+
+# Pemantau luaran untuk https://ubuntu.tukuk.org
+#
+# Mengapa di sini: mesin server TIDAK boleh menghidupkan dirinya sendiri bila
+# mati luar kawalan (VM provider stop, blackout, kabel putus). Tiada apa-apa
+# DALAM mesin boleh memberitahu sesiapa. GitHub Actions berjalan di luar
+# mesin yang sama, jadi ia nampak downtime yang server sendiri tak nampak.
+#
+# Repo PUBLIC  -> cron percuma tanpa had.
+# Had jujur:
+#   - cron GitHub boleh berundur beberapa minit di bawah beban (bukan tepat 5min)
+#   - workflow bertaurmatik DIMATIKAN selepas 60 hari tanpa aktiviti repo
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+    inputs:
+      force_fail:
+        description: 'Uji jalur KEGAGALAN (buka issue tanpa mematikan laman)'
+        type: boolean
+        default: false
+
+# contents:read sahaja utk kod; issues:write utk buka/tutup issue.
+# Tiada scope tulis ke repo — monitor tak pernah mengubah kod.
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: uptime-monitor
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    name: Periksa laman
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Uji kedua-dua endpoint
+        id: probe
+        env:
+          # Force-fail hanya untuk ujian jalur kegagalan; schedule = kosong = false
+          FORCE_FAIL: ${{ inputs.force_fail || false }}
+        run: |
+          set -uo pipefail
+          UA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+          details=""
+          ok=true
+
+          # 1) Muka depan: mesti 200 DAN mengandungi penanda hero.
+          #    200 kosong / 404 / 502 semuanya dianggap gagal.
+          code=$(curl -sS -o /tmp/home.html -w '%{http_code}' \
+                 --max-time 25 --retry 2 --retry-delay 3 \
+                 -A "$UA" https://ubuntu.tukuk.org/ || echo 000)
+          if [ "$code" != "200" ]; then
+            ok=false; details="${details}muka depan HTTP=${code}\n"
+          elif ! grep -q "Turn your idea into an app" /tmp/home.html; then
+            ok=false; details="${details}muka depan 200 TETAPI penanda hero hilang (kandungan rosak/bukan laman kita)\n"
+          else
+            echo "  ✓ muka depan: 200 + penanda hero"
+          fi
+
+          # 2) API proxy: mesti 200 dan mempunyai medan "source".
+          #    Ini menguji rantai nginx -> proxy:3000 -> ollama yang
+          #    muka depan SAHAJA tak dapat kesan (laman statik boleh hidup
+          #    sementara AI sudah mati).
+          apicode=$(curl -sS -o /tmp/api.json -w '%{http_code}' \
+                 --max-time 25 --retry 2 --retry-delay 3 \
+                 -A "$UA" https://ubuntu.tukuk.org/api/ollama/api/tags || echo 000)
+          if [ "$apicode" != "200" ]; then
+            ok=false; details="${details}API tags HTTP=${apicode}\n"
+          elif ! grep -q '"source"' /tmp/api.json; then
+            ok=false; details="${details}API tags 200 tetapi medan source hilang\n"
+          else
+            echo "  ✓ API tags: 200 + source=$(grep -o '"source":"[^"]*"' /tmp/api.json)"
+          fi
+
+          # 3) Ujian jalur kegagalan (workflow_dispatch sahaja)
+          if [ "$FORCE_FAIL" = "true" ]; then
+            ok=false
+            details="${details}UJIAN: force_fail=true (dipaksa gagal utk uji alert)\n"
+            echo "  ⚠ force_fail aktif — akan membuka issue"
+          fi
+
+          if [ "$ok" = "true" ]; then
+            echo "result=ok" >> "$GITHUB_OUTPUT"
+            echo "  KEPUTUSAN: SIHAT"
+          else
+            echo "result=fail" >> "$GITHUB_OUTPUT"
+            printf "  KEPUTUSAN: GAGAL\n  %b" "$details"
+          fi
+          {
+            echo "details<<DETAILS_EOF"
+            printf "%b" "$details"
+            echo "DETAILS_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Buka issue bila DOWN
+        if: steps.probe.outputs.result == 'fail'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -uo pipefail
+          gh label create outage --color B60205 --description 'Laman tidak dapat diakses' --force
+
+          TITLE='🔴 ubuntu.tukuk.org TIDAK DAPAT DIAKSES'
+          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open \
+                     --limit 200 --json title \
+                     --jq "[.[] | select(.title == \"${TITLE}\")] | length")
+
+          if [ "$existing" = "0" ]; then
+            gh issue create --repo "$GITHUB_REPOSITORY" \
+              --title "$TITLE" \
+              --label outage \
+              --body "$(printf 'Laman **tidak dapat diakses**.\n\n## Butiran kegagalan\n```\n%b```\n\n## Siasatan pertama di server\n```bash\nsystemctl status nginx cloudflared ollama promptcraft-proxy\njournalctl -u nginx -u cloudflared -n 100\n```\n\nFail run: %s\n\n_Issue ini dibuka automatik oleh Uptime Monitor._' \
+                "${{ steps.probe.outputs.details }}" \
+                "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}")"
+            echo "  ✓ ISSUE BARU dibuka"
+          else
+            gh issue comment --repo "$GITHUB_REPOSITORY" \
+              --body "$(printf 'Masih **DOWN** pada pemeriksaan seterusnya.\n```\n%b```\nFail: %s' \
+                "${{ steps.probe.outputs.details }}" \
+                "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}")" \
+              "$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --limit 200 \
+                  --json number,title \
+                  --jq ".[] | select(.title == \"${TITLE}\") | .number" | head -1)"
+            echo "  ▲ issue sedia ada — KOMEN ditambah (tak membuka duplikat)"
+          fi
+
+      - name: Tutup issue bila PULIH
+        if: steps.probe.outputs.result == 'ok'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -uo pipefail
+          TITLE='🔴 ubuntu.tukuk.org TIDAK DAPAT DIAKSES'
+          nums=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --limit 200 \
+                 --json number,title \
+                 --jq ".[] | select(.title == \"${TITLE}\") | .number")
+          if [ -z "$nums" ]; then
+            echo "  ✓ sihat, tiada issue outage terbuka"
+          else
+            for n in $nums; do
+              gh issue close "$n" --repo "$GITHUB_REPOSITORY" \
+                --comment "✅ PULIH — pemeriksaan seterusnya lulus kedua-dua endpoint."
+              echo "  ✓ issue #${n} ditutup automatik"
+            done
+          fi
