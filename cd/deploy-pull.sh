@@ -79,7 +79,7 @@ esac
 
 # 3) Kemas kini clean clone. Kerja belum-commit di site-staging TIDAK terlibat.
 git -C "$REPO" reset --quiet --hard "$REMOTE"
-git -C "$REPO" clean -quiet -fd
+git -C "$REPO" clean --quiet -fd
 
 # 4) Ujian setempat. Gagal => pulangkan pointer supaya pukulan seterusnya cuba lagi.
 if ! run_tests; then
