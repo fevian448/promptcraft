@@ -50,13 +50,29 @@ jobs:
           details=""
           ok=true
 
+          # Simpan header respons supaya KEKAL boleh didiagnosis kemudian.
+          # Berguna bila dapat 403/5xx: 'server: cloudflare' + 'cf-mitigated'
+          # membuktikan Cloudflare yang menyekat (bukan origin kita).
+          dump_headers() {
+            # $1 = fail header
+            [ -f "$1" ] || return 0
+            local srv mt ray
+            srv=$(grep -i '^server:' "$1" | head -1 | tr -d '\r')
+            mt=$(grep -i '^cf-mitigated:' "$1" | head -1 | tr -d '\r')
+            ray=$(grep -i '^cf-ray:' "$1" | head -1 | tr -d '\r')
+            [ -n "$srv" ] && echo "      ${srv}\n"
+            [ -n "$mt" ]  && echo "      ${mt}\n"
+            [ -n "$ray" ] && echo "      ${ray}\n"
+          }
+
           # 1) Muka depan: mesti 200 DAN mengandungi penanda hero.
           #    200 kosong / 404 / 502 semuanya dianggap gagal.
-          code=$(curl -sS -o /tmp/home.html -w '%{http_code}' \
+          code=$(curl -sS -D /tmp/home.hdr -o /tmp/home.html -w '%{http_code}' \
                  --max-time 25 --retry 2 --retry-delay 3 \
                  -A "$UA" https://ubuntu.tukuk.org/ || echo 000)
           if [ "$code" != "200" ]; then
             ok=false; details="${details}muka depan HTTP=${code}\n"
+            dump_headers /tmp/home.hdr
           elif ! grep -q "Turn your idea into an app" /tmp/home.html; then
             ok=false; details="${details}muka depan 200 TETAPI penanda hero hilang (kandungan rosak/bukan laman kita)\n"
           else
@@ -67,11 +83,12 @@ jobs:
           #    Ini menguji rantai nginx -> proxy:3000 -> ollama yang
           #    muka depan SAHAJA tak dapat kesan (laman statik boleh hidup
           #    sementara AI sudah mati).
-          apicode=$(curl -sS -o /tmp/api.json -w '%{http_code}' \
+          apicode=$(curl -sS -D /tmp/api.hdr -o /tmp/api.json -w '%{http_code}' \
                  --max-time 25 --retry 2 --retry-delay 3 \
                  -A "$UA" https://ubuntu.tukuk.org/api/ollama/api/tags || echo 000)
           if [ "$apicode" != "200" ]; then
             ok=false; details="${details}API tags HTTP=${apicode}\n"
+            dump_headers /tmp/api.hdr
           elif ! grep -q '"source"' /tmp/api.json; then
             ok=false; details="${details}API tags 200 tetapi medan source hilang\n"
           else
@@ -104,12 +121,24 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -uo pipefail
-          gh label create outage --color B60205 --description 'Laman tidak dapat diakses' --force
+          # --repo WAJIB: job ini tiada actions/checkout, jadi gh tak dapat
+          # kesan repo dari remote git. Tanpa flag ni, gh gagal dengan
+          # "fatal: not a git repository" dan TIADA issue terbuka langsung.
+          gh label create outage --color B60205 \
+            --description 'Laman tidak dapat diakses' \
+            --repo "$GITHUB_REPOSITORY" --force
 
           TITLE='🔴 ubuntu.tukuk.org TIDAK DAPAT DIAKSES'
           existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open \
                      --limit 200 --json title \
-                     --jq "[.[] | select(.title == \"${TITLE}\")] | length")
+                     --jq "[.[] | select(.title == \"${TITLE}\")] | length" 2>/dev/null || echo "?")
+          echo "  bilangan issue sedia ada: ${existing}"
+
+          # Jika existing='?' bermakna query gagal — JANGAN buka duplikat buta.
+          if [ "$existing" = "?" ]; then
+            echo "::warning::Gagal menyemak issue sedia ada — langkah dibatalkan utk elak duplikat"
+            exit 1
+          fi
 
           if [ "$existing" = "0" ]; then
             gh issue create --repo "$GITHUB_REPOSITORY" \
