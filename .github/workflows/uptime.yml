@@ -53,16 +53,28 @@ jobs:
           # Simpan header respons supaya KEKAL boleh didiagnosis kemudian.
           # Berguna bila dapat 403/5xx: 'server: cloudflare' + 'cf-mitigated'
           # membuktikan Cloudflare yang menyekat (bukan origin kita).
+          # Amsal: TAMBAH pada $details (bukan echo ke log sahaja) supaya
+          # bukti kekal dalam badan issue, bukan hilang dalam log run.
           dump_headers() {
             # $1 = fail header
             [ -f "$1" ] || return 0
             local srv mt ray
-            srv=$(grep -i '^server:' "$1" | head -1 | tr -d '\r')
-            mt=$(grep -i '^cf-mitigated:' "$1" | head -1 | tr -d '\r')
-            ray=$(grep -i '^cf-ray:' "$1" | head -1 | tr -d '\r')
-            [ -n "$srv" ] && echo "      ${srv}\n"
-            [ -n "$mt" ]  && echo "      ${mt}\n"
-            [ -n "$ray" ] && echo "      ${ray}\n"
+            # || true WAJIB: GitHub menjalankan step sebagai `bash -e {0}`,
+            # jadi walaupun skrip ini hanya menulis `set -uo pipefail`,
+            # errexit TETAP aktif. grep tanpa match keluar=1 + pipefail ->
+            # assignment gagal -> skrip mati SENYAP sebelum sempat buka issue.
+            # (Senario sebenar: 502 origin tanpa cf-mitigated, atau header
+            #  ters.catat separuh bila cloudflared mati.)
+            srv=$(grep -i '^server:' "$1" | head -1 | tr -d '\r' || true)
+            mt=$(grep -i '^cf-mitigated:' "$1" | head -1 | tr -d '\r' || true)
+            ray=$(grep -i '^cf-ray:' "$1" | head -1 | tr -d '\r' || true)
+            [ -n "$srv" ] && details="${details}    ${srv}\n"
+            [ -n "$mt" ]  && details="${details}    ${mt}\n"
+            [ -n "$ray" ] && details="${details}    ${ray}\n"
+            if [ -n "$srv" ] && echo "$srv" | grep -qi cloudflare; then
+              details="${details}    -> 403/5xx ini DATANG DARI CLOUDFLARE, bukan origin.\n"
+              details="${details}    -> origin TIDAK mencatat request ini dalam nginx access.log.\n"
+            fi
           }
 
           # 1) Muka depan: mesti 200 DAN mengandungi penanda hero.
@@ -166,9 +178,12 @@ jobs:
         run: |
           set -uo pipefail
           TITLE='🔴 ubuntu.tukuk.org TIDAK DAPAT DIAKSES'
+          # || true: gh boleh gagal sementara (rangkaian); jangan bunuh job
+          # sihat dgn -e. Kosong -> dianggap tiada issue -> cuba lagi pusingan
+          # seterusnya (self-healing, tiada alert palsu merah).
           nums=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --limit 200 \
                  --json number,title \
-                 --jq ".[] | select(.title == \"${TITLE}\") | .number")
+                 --jq ".[] | select(.title == \"${TITLE}\") | .number" || true)
           if [ -z "$nums" ]; then
             echo "  ✓ sihat, tiada issue outage terbuka"
           else
