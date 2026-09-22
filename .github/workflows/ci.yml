@@ -34,7 +34,7 @@ jobs:
       - name: Sintaks JS (node --check)
         run: |
           set -euo pipefail
-          for f in app.js chips.js zip.js site-config.js proxy/server.js tests/zip.test.js tests/dom-refs.test.js; do
+          for f in app.js chips.js zip.js site-config.js i18n.js proxy/server.js tests/zip.test.js tests/dom-refs.test.js tests/i18n.test.js; do
             if [ ! -f "$f" ]; then
               echo "::error::fail hilang: $f"
               exit 1
@@ -48,6 +48,9 @@ jobs:
 
       - name: Uji rujukan DOM (index.html <-> app.js)
         run: node tests/dom-refs.test.js
+
+      - name: Uji i18n (semua kunci wujud dalam semua bahasa)
+        run: node tests/i18n.test.js
 
       - name: Struktur HTML (tiada tag tak tertutup)
         run: |

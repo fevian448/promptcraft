@@ -50,7 +50,12 @@
    * @returns {Uint8Array} bait ZIP yang sah
    */
   function make(files) {
-    if (!files || !files.length) throw new Error("ZipUtil.make: tiada fail");
+    if (!files || !files.length) {
+      // Kutip terjemahan pada masa dipanggil (bukan masa muat) supaya
+      // zip.js tak bergantung pada urutan skrip. Sandbox ujian tiada i18n => Inggeris.
+      var i18n = window.PROMPT_I18N;
+      throw new Error(i18n ? i18n.t("zip.nofiles") : "ZipUtil.make: no files");
+    }
 
     var stamp = dosDateTime(new Date());
     var localChunks = [];

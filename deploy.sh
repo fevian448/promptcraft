@@ -9,7 +9,7 @@ NGINX_SITE=/etc/nginx/sites-available/default
 
 echo "==> 1/4 Menyalin file ke $DEST"
 install -d -m 0755 "$DEST"
-for f in index.html styles.css app.js chips.js zip.js site-config.js; do
+for f in index.html styles.css app.js chips.js zip.js site-config.js i18n.js; do
   install -m 0644 "$SRC/$f" "$DEST/$f"
   echo "    + $f"
 done

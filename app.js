@@ -52,6 +52,14 @@
     toast: $("toast")
   };
 
+  /* ---------- i18n ----------
+     I18N boleh hilang kalau i18n.js gagal dimuat. Dalam kes itu halaman
+     kekal sepenuhnya Inggeris (teks statik) — TIDAK bercampur, hanya
+     tak diterjemah. Jangan biarkan ini mematikan app. */
+  const I18N = window.PROMPT_I18N || null;
+  const t = I18N ? I18N.t : (k) => k;
+  const currentLang = () => (I18N ? I18N.lang() : "en");
+
   /* ---------- state ---------- */
   const state = {
     apiBase: null,        // base URL Ollama yang berhasil diakses
@@ -65,7 +73,16 @@
     lastRender: 0,
     lastCode: 0,
     startedAt: 0,
-    genCount: 0
+    genCount: 0,
+
+    /* ---- penanda utk dicat semasa bertukar bahasa ---- */
+    modelMode: "loading",    // loading | none | list
+    engineMode: "checking",  // checking | ok | none | down
+    engineSource: null,      // "hybrid" | "local"
+    modelCount: 0,
+    privacyMode: "cloud",    // cloud | local
+    lastStatus: { k: "status.ready", p: null, kind: null },
+    lastNote: null           // {k,p,kind} utk kunci i18n, {r,kind} utk teks mentah
   };
 
   /* ============================================================
@@ -90,7 +107,7 @@
         lastErr = err;
       }
     }
-    throw lastErr || new Error("Ollama tidak terjangkau");
+    throw lastErr || new Error(t("err.unreachable"));
   }
 
   /** GET /api/tags → {models:[...], default, source} (proxy hantar juga default/source) */
@@ -245,8 +262,14 @@
     if (final) {
       el.codeView.scrollTop = el.codeView.scrollHeight;
     }
-    const kb = (new Blob([src]).size / 1024).toFixed(1);
-    el.codeMeta.textContent = `${src.split("\n").length} baris · ${kb} KB`;
+    renderCodeMeta();
+  }
+
+  /** Metadata tab Code — ikut bahasa semasa. */
+  function renderCodeMeta() {
+    if (!state.code) { el.codeMeta.textContent = ""; return; }
+    const kb = (new Blob([state.code]).size / 1024).toFixed(1);
+    el.codeMeta.textContent = t("meta.lines", { n: state.code.split("\n").length, kb });
   }
 
   function renderPreview(force) {
@@ -263,6 +286,8 @@
      UI helpers
      ============================================================ */
   let toastTimer;
+  /** Terima TEKS AKHIR — panggil t() di tapak pemanggil.
+      Toast hidup ~2.2s, jadi ia tak perlu dicat semula bila bertukar bahasa. */
   function toast(msg) {
     el.toast.textContent = msg;
     el.toast.classList.add("show");
@@ -270,11 +295,75 @@
     toastTimer = setTimeout(() => el.toast.classList.remove("show"), 2200);
   }
 
-  function setStatus(text, kind) {
-    el.statusText.textContent = text;
+  /** Status disimpan sebagai KUNCI i18n, bukan teks rata, supaya
+      boleh diterjemah semula apabila pengguna bertukar bahasa. */
+  function setStatus(key, params, kind) {
+    state.lastStatus = { k: key, p: params, kind: kind || null };
+    renderStatus();
+  }
+
+  function renderStatus() {
+    const s = state.lastStatus || { k: "status.ready", p: null, kind: null };
+    el.statusText.textContent = t(s.k, s.p);
+    const kind = s.kind;
     el.status.classList.toggle("busy", kind === "busy");
     el.status.classList.toggle("err", kind === "err");
     el.statusSpinner.classList.toggle("on", kind === "busy");
+  }
+
+  /**
+   * Nota bawah composer. Dua bentuk disedari:
+   *   setNote(kunci, params, jenis)  -> i18n, boleh dicat semula
+   *   setNoteRaw(teks, jenis)        -> mentah (mesej server, dll.)
+   *   setNote(null)                  -> kosongkan
+   */
+  function setNote(key, params, kind) {
+    state.lastNote = key ? { k: key, p: params, kind: kind || "" } : null;
+    renderNote();
+  }
+
+  function setNoteRaw(text, kind) {
+    state.lastNote = text ? { r: text, kind: kind || "" } : null;
+    renderNote();
+  }
+
+  function renderNote() {
+    const n = state.lastNote;
+    if (!n) { el.homeNote.textContent = ""; el.homeNote.className = "note"; return; }
+    el.homeNote.textContent = ("r" in n) ? n.r : t(n.k, n.p);
+    el.homeNote.className = "note" + (n.kind ? " " + n.kind : "");
+  }
+
+  function renderCharCount() {
+    el.charCount.textContent = t("hint.chars", { n: el.prompt.value.length });
+  }
+
+  /** Baris enjin atas — nama + bilangan model, ikut bahasa. */
+  function renderEngine() {
+    if (state.engineMode === "down") { el.engineLabel.textContent = t("engine.down"); return; }
+    if (state.engineMode === "none") { el.engineLabel.textContent = t("engine.none"); return; }
+    if (state.engineMode === "checking") { el.engineLabel.textContent = t("top.engine.checking"); return; }
+    el.engineLabel.textContent = state.engineSource === "hybrid"
+      ? t("engine.hybrid", { n: state.modelCount })
+      : t("engine.local", { n: state.modelCount });
+  }
+
+  /** Nota privasi kaki halaman — varian cloud vs local. */
+  function renderPrivacy() {
+    const line = $("privacyLine");
+    if (line) line.innerHTML = t(state.privacyMode === "local" ? "privacy.local" : "privacy.cloud");
+  }
+
+  /** Pilihan istimewa dalam senarai model. Nama model = data, bukan terjemahan,
+      jadi senarai "list" tak perlu disentuh. */
+  function renderModelSelect() {
+    if (state.modelMode === "loading") {
+      el.modelSelect.innerHTML =
+        '<option data-i18n="model.loading">' + escapeHTML(t("model.loading")) + "</option>";
+    } else if (state.modelMode === "none") {
+      el.modelSelect.innerHTML =
+        '<option value="" data-i18n="model.none">' + escapeHTML(t("model.none")) + "</option>";
+    }
   }
 
   function rate() {
@@ -284,10 +373,13 @@
     return ` · ${(state.genCount / t).toFixed(1) } tok/s`;
   }
 
-  function addMsg(role, text) {
+  /** Mesej sembang. `spec` ada => kunci i18n (boleh diterjemah semula);
+      `spec` tiada => teks mentah (mesej pengguna / mesej server). */
+  function addMsg(role, text, spec) {
     const div = document.createElement("div");
     div.className = "msg " + role;
-    div.textContent = text;
+    if (spec) div.setAttribute("data-msg-key", JSON.stringify(spec));
+    div.textContent = spec ? t(spec.k, spec.p) : text;
     el.chatLog.appendChild(div);
     el.chatLog.scrollTop = el.chatLog.scrollHeight;
     if (role === "user") {
@@ -296,6 +388,20 @@
       el.chatBadge.hidden = false;
     }
     return div;
+  }
+
+  /** Kemas kini mesej sembang yang berpaksikan kunci apabila bahasa bertukar. */
+  function addMsgKeyed(role, key, params) {
+    return addMsg(role, null, { k: key, p: params || null });
+  }
+
+  function renderChatLang() {
+    const nodes = el.chatLog.querySelectorAll("[data-msg-key]");
+    for (const n of nodes) {
+      let spec;
+      try { spec = JSON.parse(n.getAttribute("data-msg-key")); } catch { continue; }
+      if (spec) n.textContent = t(spec.k, spec.p);
+    }
   }
 
   function switchTab(which) {
@@ -329,7 +435,7 @@
     el.stopBtn.hidden = false;
     el.generateBtn.disabled = true;
     el.chatSend.disabled = true;
-    setStatus(isFollowUp ? "memperbarui…" : "menulis kode…", "busy");
+    setStatus(isFollowUp ? "status.updating" : "status.writing", { rate: rate() }, "busy");
 
     let raw = "";
 
@@ -346,10 +452,10 @@
             state.code = partial;
             renderCode(false);
             renderPreview(false);
-            setStatus(`menulis kode…${rate()}`, "busy");
+            setStatus("status.writing", { rate: rate() }, "busy");
           } else {
             el.codeEl.textContent = raw;
-            setStatus(`menulis…${rate()}`, "busy");
+            setStatus("status.writingRaw", { rate: rate() }, "busy");
           }
         }
       }, state.abort.signal);
@@ -367,7 +473,7 @@
       }
 
       if (!final || !/<html[\s>]/i.test(final)) {
-        throw new Error("Model tidak mengeluarkan HTML yang valid. Coba lagi atau ubah prompt.");
+        throw new Error(t("err.notHtml"));
       }
 
       state.code = final;
@@ -378,18 +484,16 @@
       renderCode(true);
       renderPreview(true);
       const secs = ((Date.now() - state.startedAt) / 1000).toFixed(1);
-      setStatus(`selesai dalam ${secs}s`, null);
+      setStatus("status.done", { s: secs }, null);
 
       if (note === "potongan") {
         // hasil terpotong → beri tahu user, jangan diamkan
-        const w = "⚠ Hasil terpotong di tengah (model kehabisan token). " +
-                  "Preview mungkin belum lengkap — coba Generate ulang atau persempit prompt.";
-        if (isFollowUp) addMsg("error", w);
-        else { el.homeNote.textContent = ""; toast(w); }
-        addMsg("meta", "Output terpotong, kode dirapikan otomatis.");
+        if (isFollowUp) addMsgKeyed("error", "warn.truncated");
+        else { setNote(null); toast(t("warn.truncated")); }
+        addMsgKeyed("meta", "chat.truncated");
       }
 
-      if (isFollowUp) addMsg("assistant", "✓ Kode sudah diperbarui — lihat tab Code & panel preview.");
+      if (isFollowUp) addMsgKeyed("assistant", "chat.updated");
       else el.wsTitle.textContent = idea;
       el.wsTitle.title = idea;
 
@@ -398,12 +502,12 @@
 
     } catch (err) {
       if (err.name === "AbortError") {
-        setStatus("dihentikan", null);
+        setStatus("status.stopped", null, null);
         if (state.code) renderCode(true);
-        if (isFollowUp) addMsg("meta", "Generasi dihentikan.");
+        if (isFollowUp) addMsgKeyed("meta", "chat.stopped");
       } else {
         console.error(err);
-        setStatus("gagal", "err");
+        setStatus("status.failed", null, "err");
         const m = addMsg("error", "⚠ " + err.message);
         m.style.display = "block";
         if (isFollowUp) {
@@ -411,8 +515,7 @@
         } else {
           toast(err.message);
           showWorkspace(false);
-          el.homeNote.textContent = "⚠ " + err.message;
-          el.homeNote.className = "note error";
+          setNoteRaw("⚠ " + err.message, "error");
         }
       }
     } finally {
@@ -436,13 +539,11 @@
     const idea = el.prompt.value.trim();
     if (!idea) {
       el.prompt.focus();
-      el.homeNote.textContent = "Tulis dulu deskripsi aplikasimu.";
-      el.homeNote.className = "note warn";
+      setNote("note.writefirst", null, "warn");
       return;
     }
     if (!state.model) {
-      el.homeNote.textContent = "Tidak ada model Ollama yang bisa dipakai.";
-      el.homeNote.className = "note error";
+      setNote("note.nomodel", null, "error");
       return;
     }
 
@@ -452,13 +553,12 @@
     state.chatCount = 0;
     el.chatBadge.hidden = true;
     el.chatLog.innerHTML = "";
-    addMsg("meta", "Sesi baru · model " + state.model);
+    addMsgKeyed("meta", "chat.newsession", { model: state.model });
     el.previewPlaceholder.classList.remove("off");
     el.preview.removeAttribute("srcdoc");
     el.codeEl.textContent = "";
     el.codeMeta.textContent = "";
-    el.homeNote.textContent = "";
-    el.homeNote.className = "note";
+    setNote(null);
 
     showWorkspace(true);
     switchTab("code");
@@ -470,16 +570,20 @@
   el.prompt.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); generate(); }
   });
-  el.prompt.addEventListener("input", () => {
-    el.charCount.textContent = el.prompt.value.length + " karakter";
-  });
+  el.prompt.addEventListener("input", renderCharCount);
 
   el.chips.addEventListener("click", (e) => {
     const chip = e.target.closest(".chip");
     if (!chip) return;
-    const key = chip.textContent.trim();
-    const map = window.PROMPT_CHIPS || {};
-    el.prompt.value = map[key] || key;
+    // Cari ikut id STABIL (data-chip), BUKAN ikut teks label —
+    // label berubah mengikut bahasa, jadi guna label = chip tak dapat cari prompt.
+    const id = chip.getAttribute("data-chip");
+    const entry = (window.PROMPT_CHIPS || {})[id];
+    if (entry && typeof entry === "object") {
+      el.prompt.value = entry[currentLang()] || entry.en || "";
+    } else {
+      el.prompt.value = chip.textContent.trim();
+    }
     el.prompt.dispatchEvent(new Event("input"));
     el.prompt.focus();
   });
@@ -500,12 +604,12 @@
   });
 
   el.copyBtn.addEventListener("click", async () => {
-    if (!state.code) return toast("Belum ada kode");
+    if (!state.code) return toast(t("toast.nocode"));
     try {
       await navigator.clipboard.writeText(state.code);
-      toast("Kode disalin ✓");
+      toast(t("toast.copied"));
     } catch {
-      toast("Gagal menyalin (izin clipboard ditolak)");
+      toast(t("toast.copyfail"));
     }
   });
 
@@ -517,7 +621,7 @@
     a.download = "index.html";
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-    toast("index.html diunduh ✓");
+    toast(t("toast.downloaded"));
   });
 
   /* ============================================================
@@ -531,7 +635,7 @@
   function licenceHolder() {
     const c = siteCfg();
     const who = [c.licensee, c.organisation].filter(Boolean).join(" / ");
-    return who || "Penjana PromptCraft";
+    return who || t("license.default.holder");
   }
 
   function buildLicense() {
@@ -565,7 +669,7 @@
   function buildReadme(idea) {
     const c = siteCfg();
     return [
-      "# " + (idea || "Aplikasi web hasil PromptCraft"),
+      "# " + (idea || t("readme.defaulttitle")),
       "",
       "Dijana oleh **PromptCraft** — " + (c.site || ""),
       "Lesen: " + (c.licence || "MIT") + " — lihat `LICENSE.txt`",
@@ -700,10 +804,11 @@
   }
 
   function downloadZip() {
-    if (!state.code) return toast("Belum ada kode");
-    if (!window.ZipUtil) return toast("Modul ZIP belum dimuat");
+    if (!state.code) return toast(t("toast.nocode"));
+    if (!window.ZipUtil) return toast(t("toast.zipnomod"));
     try {
-      const idea = state.idea || el.wsTitle.textContent || "aplikasi";
+      // "" => slugify jatuh ke "app" (nama fail neutral, bukan teks UI)
+      const idea = state.idea || el.wsTitle.textContent || "";
       const bytes = window.ZipUtil.make([
         { name: "index.html", data: state.code },
         { name: "README.md",  data: buildReadme(idea) },
@@ -715,17 +820,17 @@
       a.download = slugify(idea) + ".zip";
       a.click();
       setTimeout(() => URL.revokeObjectURL(a.href), 6000);
-      toast("Projek ZIP diunduh ✓ (3 fail)");
+      toast(t("toast.zipdone"));
     } catch (e) {
       console.error(e);
-      toast("Gagal bina ZIP: " + e.message);
+      toast(t("toast.zipfail", { err: e.message }));
     }
   }
 
   el.zipBtn.addEventListener("click", downloadZip);
 
   el.openBtn.addEventListener("click", () => {
-    if (!state.code) return toast("Belum ada kode");
+    if (!state.code) return toast(t("toast.nocode"));
     const blob = new Blob([state.code], { type: "text/html" });
     const url = URL.createObjectURL(blob);
     window.open(url, "_blank", "noopener");
@@ -736,8 +841,8 @@
     e.preventDefault();
     const txt = el.chatInput.value.trim();
     if (!txt) return;
-    if (state.streaming) return toast("Masih memproses…");
-    if (!state.model) return toast("Model belum siap");
+    if (state.streaming) return toast(t("toast.busy"));
+    if (!state.model) return toast(t("toast.nomodel"));
     addMsg("user", txt);
     run(txt, true);
   });
@@ -750,14 +855,16 @@
       const { names: models, def, source } = await listModels();
 
       if (!models.length) {
-        el.modelSelect.innerHTML = '<option value="">(tidak ada model)</option>';
+        state.modelMode = "none";
+        renderModelSelect();
         el.engineDot.className = "dot bad";
-        el.engineLabel.textContent = "tiada model";
-        el.homeNote.textContent = "Tiada model tersedia. Jalankan: ollama pull qwen2.5-coder:0.5b";
-        el.homeNote.className = "note warn";
+        state.engineMode = "none";
+        renderEngine();
+        setNote("note.nomodels.hint", null, "warn");
         return;
       }
 
+      state.modelMode = "list";
       el.modelSelect.innerHTML = "";
 
       // Utama: default dari proxy (cloud dahulu kalau ada). Baru: fallback local.
@@ -779,29 +886,43 @@
 
       el.engineDot.className = "dot ok";
       // source: "hybrid" = ada free API cloud; "local" = Ollama sahaja
-      el.engineLabel.textContent = (source === "hybrid")
-        ? "AI awan + sandaran lokal · " + models.length + " model"
-        : "Ollama lokal · " + models.length + " model";
-      el.charCount.textContent = "0 karakter";
+      state.engineMode = "ok";
+      state.engineSource = source;
+      state.modelCount = models.length;
+      renderEngine();
+      renderCharCount();
 
-      const line = document.getElementById("privacyLine");
-      if (line && source === "local") {
-        line.innerHTML = "Buat sementara semua inference berjalan di server ini (Ollama lokal). " +
-          "Bila API awan percuma dipasang, prompt mungkin dihantar ke pembekal AI pihak ketiga — " +
-          "<strong>jangan masukkan rahsia atau data sensitif</strong>.";
-      }
+      // Nota privasi: varian ikut sumber inference, ikut bahasa semasa.
+      state.privacyMode = (source === "local") ? "local" : "cloud";
+      renderPrivacy();
     } catch (err) {
       console.error(err);
       el.engineDot.className = "dot bad";
-      el.engineLabel.textContent = "engine tidak terjangkau";
-      el.homeNote.textContent =
-        "Tidak bisa menghubungi engine (" + err.message + "). Pastikan servis promptcraft-proxy dan ollama berjalan.";
-      el.homeNote.className = "note error";
+      state.engineMode = "down";
+      renderEngine();
+      setNote("note.engine.unreachable", { err: err.message }, "error");
       el.generateBtn.disabled = true;
     }
   }
 
   el.modelSelect.addEventListener("change", () => { state.model = el.modelSelect.value; });
+
+  /* Bila bahasa bertukar, terjemah semula SEMUA yang bergantung padanya —
+     termasuk yang sudah dipaparkan (status, nota, mesej sembang, metadata). */
+  document.addEventListener("pc:lang", () => {
+    renderStatus();
+    renderNote();
+    renderCharCount();
+    renderCodeMeta();
+    renderEngine();
+    renderPrivacy();
+    renderModelSelect();
+    renderChatLang();
+  });
+
+  // WAJIB dipanggil SELEPAS pendengar didaftarkan di atas: init() menghantar
+  // peristiwa pc:lang secara serentak semasa kesan bahasa pelayar.
+  if (I18N) I18N.init();
 
   boot();
 })();

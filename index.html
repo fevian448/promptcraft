@@ -1,10 +1,13 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- AMARAN uptime monitor (.github/workflows/uptime.yml): teks "Turn your idea
+     into an app" DI BAWAH INI mesti kekal dalam <title> dan dalam Bahasa
+     Inggeris. Monitor guna grep tanpa JS; tukar => laporan DOWN palsu + issue. -->
 <title>PromptCraft — Turn your idea into an app</title>
-<meta name="description" content="Deskripsikan aplikasi yang kamu mau, model lokal Ollama akan menuliskan kode dan langsung menampilkannya.">
+<meta name="description" content="Describe the app you want; the local Ollama model writes the code and shows it right away.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%F0%9F%92%A1%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="styles.css">
 </head>
@@ -15,7 +18,7 @@
 <div class="halo halo-3"></div>
 
 <header class="topbar">
-  <a class="brand" href="./" aria-label="PromptCraft home">
+  <a class="brand" href="./" data-i18n-aria="top.home.aria" aria-label="PromptCraft home">
     <span class="brand-mark" aria-hidden="true">
       <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z"/>
@@ -26,60 +29,61 @@
   </a>
 
   <nav class="topbar-right">
-    <span class="pill" id="enginePill" title="Backend inference">
+    <span class="pill" id="enginePill" data-i18n-title="top.engine.title" title="Inference backend">
       <span class="dot" id="engineDot"></span>
-      <span id="engineLabel">memeriksa Ollama…</span>
+      <span id="engineLabel">Checking Ollama…</span>
     </span>
-    <a class="ghost-link" href="https://ollama.com" target="_blank" rel="noreferrer noopener">Powered by Ollama</a>
+    <select class="lang-select" id="langSelect" data-i18n-aria="top.lang.aria" aria-label="Language"></select>
+    <a class="ghost-link" href="https://ollama.com" target="_blank" rel="noreferrer noopener" data-i18n="top.powered">Powered by Ollama</a>
   </nav>
 </header>
 
 <!-- ============ HOME ============ -->
 <main id="home" class="home">
   <section class="hero">
-    <p class="eyebrow">Generator aplikasi open-source · model berjalan lokal</p>
-    <h1>Turn your idea<br><span class="gradient-text">into an app</span></h1>
-    <p class="sub">Tulis satu kalimat. Model kamu akan menulis kode, lalu kamu bisa langsung
-      menjalankannya, mengeditnya, dan menyempurnakannya lewat chat.</p>
+    <p class="eyebrow" data-i18n="hero.eyebrow">Open-source app generator · runs on a local model</p>
+    <h1><span data-i18n="hero.l1">Turn your idea</span><br><span class="gradient-text" data-i18n="hero.l2">into an app</span></h1>
+    <p class="sub" data-i18n="hero.sub">Write one sentence. Your model writes the code, and you can run it, edit it, and refine it through chat.</p>
 
     <div class="composer">
-      <label class="sr-only" for="prompt">Deskripsi aplikasi</label>
+      <label class="sr-only" for="prompt" data-i18n="prompt.label">App description</label>
       <textarea id="prompt" rows="3" spellcheck="false"
-        placeholder="Aplikasi pengeluaran bulanan dengan grafik batang, dark mode, dan bisa menambah transaksi…"></textarea>
+        data-i18n-ph="prompt.placeholder"
+        placeholder="Monthly spending app with bar charts, dark mode, and a way to add transactions…"></textarea>
 
       <div class="composer-bar">
         <div class="composer-left">
           <label class="select-wrap">
-            <span class="select-label">model</span>
-            <select id="modelSelect" aria-label="Pilih model">
-              <option>memuat model…</option>
+            <span class="select-label" data-i18n="model.label">model</span>
+            <select id="modelSelect" data-i18n-aria="model.aria" aria-label="Choose a model">
+              <option data-i18n="model.loading">Loading models…</option>
             </select>
           </label>
-          <span class="hint" id="charCount">0 karakter</span>
+          <span class="hint" id="charCount">0 characters</span>
         </div>
         <button class="btn btn-primary" id="generateBtn" type="button">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-          Generate
+          <span data-i18n="btn.generate">Generate</span>
         </button>
       </div>
     </div>
 
-    <div class="chips" id="chips" aria-label="Contoh prompt">
-      <button class="chip" type="button">Sneaker Drop</button>
-      <button class="chip" type="button">Expense Tracker</button>
-      <button class="chip" type="button">Sourdough Timer</button>
-      <button class="chip" type="button">Team Chat</button>
-      <button class="chip" type="button">Beat Maker</button>
-      <button class="chip" type="button">Palette Generator</button>
+    <div class="chips" id="chips" data-i18n-aria="chips.aria" aria-label="Example prompts">
+      <button class="chip" type="button" data-chip="sneaker" data-i18n="chip.sneaker">Sneaker Drop</button>
+      <button class="chip" type="button" data-chip="expense" data-i18n="chip.expense">Expense Tracker</button>
+      <button class="chip" type="button" data-chip="sourdough" data-i18n="chip.sourdough">Sourdough Timer</button>
+      <button class="chip" type="button" data-chip="team" data-i18n="chip.team">Team Chat</button>
+      <button class="chip" type="button" data-chip="beat" data-i18n="chip.beat">Beat Maker</button>
+      <button class="chip" type="button" data-chip="palette" data-i18n="chip.palette">Palette Generator</button>
     </div>
 
     <p class="note" id="homeNote"></p>
   </section>
 
   <footer class="foot">
-    <span>Dibangun dengan <strong>Ollama</strong> &amp; <strong>qwen2.5-coder</strong>.</span>
+    <span data-i18n-html="foot.built">Built with <strong>Ollama</strong> &amp; <strong>qwen2.5-coder</strong>.</span>
     <span class="foot-sep">·</span>
-    <span id="privacyLine">Model dipilih automatik: perkhidmatan AI awan percuma dahulu, model lokal (Ollama) sebagai sandaran bila awan had laju. <strong>Prompt kamu mungkin dihantar ke pembekal AI pihak ketiga</strong> — jangan masukkan rahsia atau data sensitif.</span>
+    <span id="privacyLine">Models are chosen automatically: free cloud AI first, the local Ollama model as a fallback when the cloud rate-limits. <strong>Your prompt may be sent to a third-party AI provider</strong> — never include secrets or sensitive data.</span>
   </footer>
 </main>
 
@@ -88,7 +92,7 @@
   <div class="ws-topbar">
     <button class="btn btn-ghost" id="backBtn" type="button">
       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
-      Baru
+      <span data-i18n="ws.new">New</span>
     </button>
 
     <div class="ws-title" id="wsTitle" title=""></div>
@@ -96,21 +100,21 @@
     <div class="ws-actions">
       <span class="status" id="status">
         <span class="spinner" id="statusSpinner"></span>
-        <span id="statusText">siap</span>
+        <span id="statusText">ready</span>
       </span>
-      <button class="btn btn-ghost" id="copyBtn" type="button" title="Salin kode">Copy</button>
-      <button class="btn btn-ghost" id="downloadBtn" type="button" title="Unduh index.html">Download</button>
-      <button class="btn btn-ghost" id="zipBtn" type="button" title="Muat turun projek ZIP (index.html + README + LICENSE)">ZIP</button>
-      <button class="btn btn-ghost" id="refreshBtn" type="button" title="Muat ulang preview">Refresh</button>
-      <button class="btn btn-ghost" id="stopBtn" type="button" title="Hentikan generasi" hidden>Stop</button>
+      <button class="btn btn-ghost" id="copyBtn" type="button" data-i18n-title="btn.copy.title" title="Copy code" data-i18n="btn.copy">Copy</button>
+      <button class="btn btn-ghost" id="downloadBtn" type="button" data-i18n-title="btn.download.title" title="Download index.html" data-i18n="btn.download">Download</button>
+      <button class="btn btn-ghost" id="zipBtn" type="button" data-i18n-title="btn.zip.title" title="Download ZIP project (index.html + README + LICENSE)" data-i18n="btn.zip">ZIP</button>
+      <button class="btn btn-ghost" id="refreshBtn" type="button" data-i18n-title="btn.refresh.title" title="Reload preview" data-i18n="btn.refresh">Refresh</button>
+      <button class="btn btn-ghost" id="stopBtn" type="button" data-i18n-title="btn.stop.title" title="Stop generation" data-i18n="btn.stop" hidden>Stop</button>
     </div>
   </div>
 
   <div class="ws-body">
     <section class="pane pane-left">
       <div class="tabs" role="tablist">
-        <button class="tab is-active" id="tabCode" role="tab" aria-selected="true">Code</button>
-        <button class="tab" id="tabChat" role="tab" aria-selected="false">Chat
+        <button class="tab is-active" id="tabCode" role="tab" aria-selected="true" data-i18n="tab.code">Code</button>
+        <button class="tab" id="tabChat" role="tab" aria-selected="false"><span data-i18n="tab.chat">Chat</span>
           <span class="badge" id="chatBadge" hidden>0</span>
         </button>
         <span class="tab-meta" id="codeMeta"></span>
@@ -122,13 +126,14 @@
 
       <div class="panel panel-chat" id="panelChat" hidden>
         <div class="chat-log" id="chatLog">
-          <div class="chat-empty">Minta perubahan lewat chat, contoh:<br>
-            <em>“ganti warnanya jadi terang dan tambahkan tombol reset”</em></div>
+          <div class="chat-empty" data-i18n-html="chat.empty">Ask for changes in chat, for example:<br>
+            <em>“make it brighter and add a reset button”</em></div>
         </div>
         <form class="chat-form" id="chatForm">
           <input id="chatInput" type="text" autocomplete="off"
-                 placeholder="Jelaskan perubahan yang kamu mau…" aria-label="Perubahan yang diminta">
-          <button class="btn btn-primary" id="chatSend" type="submit">Kirim</button>
+                 data-i18n-ph="chat.input.ph" placeholder="Describe the change you want…"
+                 data-i18n-aria="chat.input.aria" aria-label="Requested change">
+          <button class="btn btn-primary" id="chatSend" type="submit" data-i18n="chat.send">Send</button>
         </form>
       </div>
     </section>
@@ -136,14 +141,14 @@
     <section class="pane pane-right">
       <div class="pane-head">
         <span class="pane-dots" aria-hidden="true"><i></i><i></i><i></i></span>
-        <span class="pane-url">preview · index.html</span>
-        <button class="btn btn-mini" id="openBtn" type="button" title="Buka di tab baru">↗</button>
+        <span class="pane-url" data-i18n="preview.pane">preview · index.html</span>
+        <button class="btn btn-mini" id="openBtn" type="button" data-i18n-title="preview.open.title" title="Open in a new tab">↗</button>
       </div>
       <div class="preview-wrap">
-        <iframe id="preview" title="Preview aplikasi" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-pointer-lock"></iframe>
+        <iframe id="preview" data-i18n-aria="preview.iframe.title" title="App preview" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-pointer-lock"></iframe>
         <div class="preview-placeholder" id="previewPlaceholder">
           <div class="big-spark">💡</div>
-          <p>Preview akan muncul di sini</p>
+          <p data-i18n="preview.empty">Your preview will appear here</p>
         </div>
       </div>
     </section>
@@ -154,6 +159,7 @@
 
 <script src="chips.js"></script>
 <script src="site-config.js"></script>
+<script src="i18n.js"></script>
 <script src="zip.js"></script>
 <script src="app.js"></script>
 </body>

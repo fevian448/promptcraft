@@ -118,6 +118,26 @@ body {
 }
 .ghost-link:hover { color: var(--text); border-color: var(--border); background: rgba(255,255,255,.04); }
 
+/* ---------- pemilih bahasa ----------
+   Nama bahasa sentiasa dipaparkan dalam bahasanya sendiri (endonim),
+   jadi ia TIDAK diubah oleh i18n — lihat i18n.js fillLangSelect(). */
+.lang-select {
+  font: inherit;
+  font-size: 12.5px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, .05);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 6px 10px;
+  cursor: pointer;
+  outline: none;
+  transition: .15s;
+  max-width: 160px;
+}
+.lang-select:hover,
+.lang-select:focus-visible { color: var(--text); background: rgba(255,255,255,.08); }
+.lang-select option { background: #14141f; color: var(--text); }
+
 /* ---------- home / hero ---------- */
 .home {
   position: relative;
