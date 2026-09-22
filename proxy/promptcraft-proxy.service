@@ -1,0 +1,35 @@
+[Unit]
+Description=PromptCraft AI Proxy (free cloud API + Ollama local fallback)
+After=network-online.target ollama.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=tukuk
+Group=tukuk
+WorkingDirectory=/opt/promptcraft-proxy
+ExecStart=/usr/bin/node /opt/promptcraft-proxy/server.js
+EnvironmentFile=/home/tukuk/.config/promptcraft/proxy.env
+
+Restart=always
+RestartSec=3
+# Elakkan kalau api key tak siap pun service tetap hidup (local mode)
+StandardOutput=journal
+StandardError=journal
+
+# Pengerasan — proxy ni tak perlu apa-apa keistimewaan
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+# NOTE: MemoryDenyWriteExecute sengaja TIDAK di sini.
+# V8 perlu memori writable+executable untuk JIT (baseline compiler);
+# apabila ia dihidupkan, Node mati dengan SIGTRAP/V8_Fatal:
+#   v8::internal::MemoryAllocator::SetPermissionsOnExecutableMemoryChunk
+
+[Install]
+WantedBy=multi-user.target

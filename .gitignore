@@ -1,0 +1,67 @@
+# ============================================================
+# PromptCraft — .gitignore
+# DITULIS SEBELUM `git init` / `git add` PERTAMA.
+# Tujuan: mustahilkan API key, keystore dan data peribadi
+# masuk ke dalam sejarah git (sekali masuk, sukar dibuang).
+# ============================================================
+
+# --- Kredensial & API key: JANGAN sekali-kali commit ---
+.env
+.env.*
+*.env
+proxy.env
+*.token
+github.token
+gh_token
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+secrets/
+credentials*
+*_secret*
+*.key.json
+
+# --- Data peribadi pemilik (disimpan DI LUAR doc root, permission 600) ---
+# Nombor IC, alamat rumah dan telefon TIDAK boleh berada dalam repo.
+owner.json
+**/owner.json
+**/.config/promptcraft/
+
+# --- Node ---
+node_modules/
+npm-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# --- Hasil build (dihasilkan oleh CI, bukan ditulis tangan) ---
+dist/
+build/
+out/
+*.apk
+*.aab
+*.AppImage
+*.appimage
+*.deb
+*.rpm
+*.exe
+*.msi
+*.zip
+*.tar.gz
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+*.iml
+
+# --- Log & sementara ---
+*.log
+*.tmp
+.cache/
