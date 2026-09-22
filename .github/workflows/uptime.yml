@@ -14,7 +14,13 @@ name: Uptime Monitor
 
 on:
   schedule:
-    - cron: '*/5 * * * *'
+    # 2-59/5 = cadence 5-minit SAMA seperti */5, tetapi bermula :02 dan
+    # MEMBUANG slot :00/:30. Sebab: ribuan workflow dunia tembak tepat pada
+    # :00/:30; puncakan cluster cron GitHub lalu GitHub sanggup DROP run
+    # ("In the worst case, the workflow may not run" - dokumentasi GitHub,
+    # dan gelombang bug scheduler Ogos/Sep 2026 di community discussions).
+    # Elak dua slot panas = peluang jauh lebih tinggi untuk benar-benar fire.
+    - cron: '2-59/5 * * * *'
   workflow_dispatch:
     inputs:
       force_fail:
