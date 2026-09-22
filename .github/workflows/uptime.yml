@@ -42,7 +42,9 @@ jobs:
   probe:
     name: Periksa laman
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    # 5m dah tak cukup: probe (<=~160s kalau endpoint slow) + pengesahan luar
+    # SEQUENTIAL (<=~2 langkah x 6x6s) + langkah gh. 8m beri margin selamat.
+    timeout-minutes: 8
 
     steps:
       - name: Uji kedua-dua endpoint
@@ -175,7 +177,14 @@ jobs:
             echo "note=$2" >> "$GITHUB_OUTPUT"
             {
               echo "details<<DETAILS_EOF"
-              printf "%b" "$PROBE_DETAILS"
+              # PUNCA BUG DIUJI SEBENAR: GitHub menyimpan nilai output
+              # heredoc TANPA newline di hujung (parser pecah kpd baris,
+              # sambung semula dgn \n). Jadi kalau kita tulis balik nilai
+              # itu dgn `printf "%b"` sahaja, hujungnya tiada \n ->
+              # `DETAILS_EOF` melekat pada baris terakhir ->
+              # runner gagal: "Matching delimiter not found" (step merah).
+              # Fix: $(...) buang semua \n hujung, `\n` tambah tepat SATU.
+              printf '%s\n' "$(printf "%b" "$PROBE_DETAILS")"
               echo "DETAILS_EOF"
             } >> "$GITHUB_OUTPUT"
           }
@@ -207,14 +216,23 @@ jobs:
           VHOME=INCONCLUSIVE VAPI=INCONCLUSIVE
           if vals=$(python3 - https://ubuntu.tukuk.org/ https://ubuntu.tukuk.org/api/ollama/api/tags <<'PY'
           import json, sys, time, urllib.request, urllib.parse
-          from concurrent.futures import ThreadPoolExecutor
 
           UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
-          def get(url):
-              req = urllib.request.Request(url, headers={"Accept": "application/json", "User-Agent": UA})
-              with urllib.request.urlopen(req, timeout=20) as r:
-                  return json.load(r)
+          def get(url, tries=3):
+              # check-host.net ada rate-limit utk IP tanpa daftar. Ujian
+              # sebenar: 2 check serentak dari IP runner -> satu gagal ->
+              # VAPI=INCONCLUSIVE (log run 35775994248). Retry + backoff.
+              err = None
+              for i in range(tries):
+                  try:
+                      req = urllib.request.Request(url, headers={"Accept": "application/json", "User-Agent": UA})
+                      with urllib.request.urlopen(req, timeout=20) as r:
+                          return json.load(r)
+                  except Exception as e:
+                      err = e
+                      time.sleep(3 + 3 * i)
+              raise err
 
           def verdict(url):
               # UP: sekurang-kurangnya satu nod dpt 200.
@@ -256,8 +274,9 @@ jobs:
                   return "DOWN"
               return "INCONCLUSIVE"
 
-          with ThreadPoolExecutor(max_workers=2) as ex:
-              v = list(ex.map(verdict, [sys.argv[1], sys.argv[2]]))
+          # SEQUENTIAL dgn sengaja: 2 check serentak dari IP runner kena
+          # rate-limit (bukti: run 35775994248, VAPI=INCONCLUSIVE).
+          v = [verdict(sys.argv[1]), verdict(sys.argv[2])]
           print("VHOME=" + v[0])
           print("VAPI=" + v[1])
           PY
@@ -277,13 +296,7 @@ jobs:
           else
             # Ketidakpastian: jangan tutup issue outage yang mungkin sah,
             # jangan buka duplikat. Run jadi neutral + warning sahaja.
-            echo "result=hold" >> "$GITHUB_OUTPUT"
-            echo "note=" >> "$GITHUB_OUTPUT"
-            {
-              echo "details<<DETAILS_EOF"
-              printf "%b" "$PROBE_DETAILS"
-              echo "DETAILS_EOF"
-            } >> "$GITHUB_OUTPUT"
+            out hold ""
             echo "::warning::Probe gagal tetapi pengesahan luar INCONCLUSIVE — isu tidak diubah (tiada bukti cukup)."
           fi
 
