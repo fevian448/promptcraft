@@ -110,15 +110,35 @@ async function localChat(body, res) {
 
     openNdjson(res);
     const reader = r.body.getReader();
+    const raw = [];                          // simpan utk tugas latar
     for (;;) {
       const { done, value } = await reader.read();
       if (done) break;
-      res.write(Buffer.from(value));   // sudah NDJSON, salin mentah
+      res.write(Buffer.from(value));         // paip mentah — latensi kekal sama
+      raw.push(value);
     }
-    return true;
+    // Pulangkan hasil assistant SUPAYA tugas latar ada bahan utk disemak.
+    // Tanpa ini backgroundHelper TIDAK PERNAH jalan pada pusingan pertama:
+    // body permintaan hanya mengandungi mesej user; kandungan assistant
+    // wujud hanya di dalam respons yang baru sahaja disalir keluar.
+    return extractAssistant(Buffer.concat(raw));
   } finally {
     clearTimeout(timer);
   }
+}
+
+function extractAssistant(buf) {
+  let out = "";
+  for (const line of buf.toString("utf8").split("\n")) {
+    const s = line.trim();
+    if (!s) continue;
+    try {
+      const o = JSON.parse(s);
+      const c = o && o.message && o.message.content;
+      if (c) out += c;
+    } catch {}                                 // baris separa / bukan JSON
+  }
+  return out;
 }
 
 /* ============================================================
@@ -222,16 +242,14 @@ async function remoteChat(body, res) {
    Hantar HANYA dokumen akhir (bukan seluruh sejarah) supaya input
    kekal kecil — bajet neuron harian itu pendek.
    ============================================================ */
-async function backgroundHelper(body) {
+async function backgroundHelper(doc) {
   if (!remoteReady) return null;               // tiada wrangler → tiada tugas
-  const msgs = Array.isArray(body.messages) ? body.messages : [];
-  const doc = [...msgs].reverse().find((m) => m.role === "assistant" && m.content);
   if (!doc) return null;                        // tiada hasil utk disemak
 
   const probe = [
     { role: "system", content: "You are a strict, terse HTML reviewer." },
     { role: "user", content:
-        String(doc.content).slice(0, 24000) +
+        String(doc).slice(0, 24000) +
         "\n\n---\nSemak dokumen HTML di atas. Balas DENGAN SATU baris sahaja: " +
         "OK jika lengkap dan sah, selain itu hanya kecacatan paling serius " +
         "(tag tak tertutup, tiada </html>, sumber luar, atau logik rosak)." }
@@ -324,13 +342,13 @@ const server = http.createServer(async (req, res) => {
       // ... menjalankan tugas belakang SAHAJA". Jadi wrangler TIDAK PERNAH
       // mengambil alih respons ini — ini songsongkan keutamaan lama
       // (awan dulu → lokal fallback) yang akan memecahkan kehendak tu.
-      await localChat(body, res);
+      const doc = await localChat(body, res);
       if (!res.writableEnded) res.end();
 
       // --- TUGAS LATAR: serentak, tak menyekat, gagal = senyap. ---
       // Sengaja TIDAK di-await supaya pengguna tak pernah nampak kesan
       // wrangler — termasuk bila had neuron harian (10k/hari) sudah habis.
-      backgroundHelper(body).catch((err) =>
+      backgroundHelper(doc).catch((err) =>
         log("helper latar gagal (dibiarkan):", err && err.message));
       return;
     }
