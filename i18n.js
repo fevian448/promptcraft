@@ -120,7 +120,7 @@
       "note.nomodels.hint": "No models available. Run: ollama pull qwen2.5-coder:0.5b",
       "note.engine.unreachable": "Could not reach the engine ({err}). Make sure promptcraft-proxy and ollama are running.",
 
-      "engine.hybrid": "Cloud AI + local fallback \u00b7 {n} models",
+      "engine.hybrid": "Local AI + cloud helper \u00b7 {n} models",
       "engine.local": "Local Ollama \u00b7 {n} models",
       "engine.none": "no models",
       "engine.down": "engine unreachable",
@@ -226,7 +226,7 @@
       "note.nomodels.hint": "Tiada model tersedia. Jalankan: ollama pull qwen2.5-coder:0.5b",
       "note.engine.unreachable": "Tidak dapat menghubungi enjin ({err}). Pastikan servis promptcraft-proxy dan ollama berjalan.",
 
-      "engine.hybrid": "AI awan + sandaran tempatan \u00b7 {n} model",
+      "engine.hybrid": "AI lokal + pembantu awan \u00b7 {n} model",
       "engine.local": "Ollama tempatan \u00b7 {n} model",
       "engine.none": "tiada model",
       "engine.down": "enjin tidak terjangkau",
@@ -332,7 +332,7 @@
       "note.nomodels.hint": "Tidak ada model tersedia. Jalankan: ollama pull qwen2.5-coder:0.5b",
       "note.engine.unreachable": "Tidak bisa menghubungi engine ({err}). Pastikan layanan promptcraft-proxy dan ollama berjalan.",
 
-      "engine.hybrid": "AI cloud + cadangan lokal \u00b7 {n} model",
+      "engine.hybrid": "AI lokal + bantuan cloud \u00b7 {n} model",
       "engine.local": "Ollama lokal \u00b7 {n} model",
       "engine.none": "tidak ada model",
       "engine.down": "engine tidak terjangkau",
@@ -438,7 +438,7 @@
       "note.nomodels.hint": "\u6ca1\u6709\u53ef\u7528\u6a21\u578b\u3002\u8bf7\u8fd0\u884c\uff1aollama pull qwen2.5-coder:0.5b",
       "note.engine.unreachable": "\u65e0\u6cd5\u8fde\u63a5\u5f15\u64ce\uff08{err}\uff09\u3002\u8bf7\u786e\u8ba4 promptcraft-proxy \u548c ollama \u670d\u52a1\u6b63\u5728\u8fd0\u884c\u3002",
 
-      "engine.hybrid": "\u4e91\u7aef AI + \u672c\u5730\u5907\u7528 \u00b7 {n} \u4e2a\u6a21\u578b",
+      "engine.hybrid": "\u672c\u5730 AI + \u4e91\u7aef\u52a9\u624b \u00b7 {n} \u4e2a\u6a21\u578b",
       "engine.local": "\u672c\u5730 Ollama \u00b7 {n} \u4e2a\u6a21\u578b",
       "engine.none": "\u65e0\u6a21\u578b",
       "engine.down": "\u5f15\u64ce\u65e0\u6cd5\u8fde\u63a5",

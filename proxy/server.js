@@ -211,6 +211,62 @@ async function remoteChat(body, res) {
 }
 
 /* ============================================================
+   TUGAS LATAR (wrangler) — menolong AI lokal TANPA menghalang
+   ------------------------------------------------------------
+   Dipanggil SELEPAS respons sudah dihantar ke pengguna, dan sengaja
+   tidak di-await. Kegagalan apa pun — termasuk had neuron harian
+   10,000/hari — dibiarkan senyap, jadi pengguna TIDAK PERNAH nampak
+   kesan wrangler. Itulah maksud "hanya menolong ... tugas belakang".
+
+   Tugas latar #1: semak kod HTML hasil janaan lokal.
+   Hantar HANYA dokumen akhir (bukan seluruh sejarah) supaya input
+   kekal kecil — bajet neuron harian itu pendek.
+   ============================================================ */
+async function backgroundHelper(body) {
+  if (!remoteReady) return null;               // tiada wrangler → tiada tugas
+  const msgs = Array.isArray(body.messages) ? body.messages : [];
+  const doc = [...msgs].reverse().find((m) => m.role === "assistant" && m.content);
+  if (!doc) return null;                        // tiada hasil utk disemak
+
+  const probe = [
+    { role: "system", content: "You are a strict, terse HTML reviewer." },
+    { role: "user", content:
+        String(doc.content).slice(0, 24000) +
+        "\n\n---\nSemak dokumen HTML di atas. Balas DENGAN SATU baris sahaja: " +
+        "OK jika lengkap dan sah, selain itu hanya kecacatan paling serius " +
+        "(tag tak tertutup, tiada </html>, sumber luar, atau logik rosak)." }
+  ];
+
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 60000);
+  try {
+    const r = await fetch(REMOTE_BASE_URL + "chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + REMOTE_API_KEY
+      },
+      body: JSON.stringify({
+        model: REMOTE_MODEL,
+        messages: probe,
+        stream: false,
+        temperature: 0,
+        max_tokens: Math.min(MAX_TOKENS, 400)
+      }),
+      signal: ctrl.signal
+    });
+    if (!r.ok) throw new Error("helper HTTP " + r.status);
+    const data = await r.json();
+    const line = (data.choices && data.choices[0] &&
+      data.choices[0].message && data.choices[0].message.content || "").trim();
+    if (line) log("helper latar:", line.slice(0, 200));
+    return line || null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/* ============================================================
    /api/tags — senarai model utk dropdown frontend
    ============================================================ */
 async function handleTags(res) {
@@ -230,7 +286,12 @@ async function handleTags(res) {
   json(res, 200, {
     models: models.map((name) => ({ name })),
     // frontend guna ni utk pilih model lalai (cloud dahulu)
-    default: remoteReady ? REMOTE_MODEL : (localModels[0] || null),
+    // LOKAL kekal tunjang — pemilik: "lokal ai tetap berjalan ... wrangler hanya
+    // menolong ... tugas belakang sahaja". Maka kewujudan wrangler TIDAK menukar
+    // lalai: pilihan awan kekal tersenarai tapi tak menjadi default.
+    // "hybrid" di sini bermaksud DATA keluar dari kotak (→ privacyMode "cloud"),
+    // BUKAN siapa yang menjana — penjanaan tetap Ollama lokal.
+    default: localModels[0] || (remoteReady ? REMOTE_MODEL : null),
     source: remoteReady ? "hybrid" : "local"
   });
 }
@@ -258,36 +319,19 @@ const server = http.createServer(async (req, res) => {
     if (req.method === "POST" && (path === "/api/chat" || path === "/chat")) {
       const body = await readBody(req);
 
-      if (remoteReady) {
-        try {
-          await remoteChat(body, res);
-          return;
-        } catch (err) {
-          // Rate limit / ralat server → jatuh ke local supaya site tak mati.
-          log("remote gagal → fallback local:", err.message);
-
-          if (res.headersSent) {
-            // Stream dah mula — tak boleh tukar hala lagi. Hentikan dengan kemas
-            // DAN jangan teruskan ke local (akan cuba writeHead dua kali → 500).
-            if (!res.writableEnded) {
-              try {
-                nd(res, {
-                  message: { role: "assistant", content: "" },
-                  done: true,
-                  done_reason: "error",
-                  error: String(err.message).slice(0, 200)
-                });
-                res.end();
-              } catch {}
-            }
-            return;
-          }
-          // Belum hantar apa-apa → jatuh ke local secara senyap.
-        }
-      }
-
+      // --- TUNJANG: Ollama lokal SENTIASA menjawab prompt pengguna. ---
+      // Keputusan pemilik: "lokal ai tetap berjalan ... wrangler hanya menolong
+      // ... menjalankan tugas belakang SAHAJA". Jadi wrangler TIDAK PERNAH
+      // mengambil alih respons ini — ini songsongkan keutamaan lama
+      // (awan dulu → lokal fallback) yang akan memecahkan kehendak tu.
       await localChat(body, res);
       if (!res.writableEnded) res.end();
+
+      // --- TUGAS LATAR: serentak, tak menyekat, gagal = senyap. ---
+      // Sengaja TIDAK di-await supaya pengguna tak pernah nampak kesan
+      // wrangler — termasuk bila had neuron harian (10k/hari) sudah habis.
+      backgroundHelper(body).catch((err) =>
+        log("helper latar gagal (dibiarkan):", err && err.message));
       return;
     }
 

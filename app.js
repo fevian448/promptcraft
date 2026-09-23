@@ -867,7 +867,8 @@
       state.modelMode = "list";
       el.modelSelect.innerHTML = "";
 
-      // Utama: default dari proxy (cloud dahulu kalau ada). Baru: fallback local.
+      // Utama: lalai dari proxy. LOKAL sentiasa jadi pilihan lalai (penjanaan
+      // tetap Ollama); wrangler cuma tugas latar. Baru: fallback local.
       const preferred = ["qwen2.5-coder:0.5b", "qwen2.5-coder:1.5b", "qwen2.5-coder:3b", "qwen3:1.7b"];
       let chosen = (def && models.includes(def))
         ? def
