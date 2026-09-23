@@ -643,6 +643,109 @@ h1 {
 .preview-placeholder .big-spark { font-size: 40px; opacity: .8; }
 .preview-placeholder.off { display: none; }
 
+/* ---------- seksyen halaman (flow → ciri → CTA) ----------
+   Arah visual sama seperti landing tool moden: kad kaca, nombor langkah
+   bergradasi ungu→merah jambu, tajuk dengan garis pendek bergradasi. */
+.sec-title {
+  margin: 0 0 clamp(20px, 3vw, 34px);
+  font-size: clamp(24px, 3.4vw, 38px);
+  line-height: 1.15;
+  letter-spacing: -.01em;
+  text-align: center;
+}
+.sec-title::after {
+  content: "";
+  display: block;
+  width: 56px;
+  height: 3px;
+  margin: 14px auto 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-3));
+}
+
+.flow,
+.feats {
+  width: 100%;
+  max-width: 1040px;
+  margin: 0 auto;
+  padding-top: clamp(46px, 7vh, 84px);
+}
+
+.flow-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+.step {
+  padding: 24px 22px 26px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel);
+  backdrop-filter: blur(12px) saturate(180%);
+  text-align: left;
+  transition: border-color .2s, transform .2s;
+}
+.step:hover { border-color: var(--border-strong); transform: translateY(-3px); }
+.step-num {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  margin-bottom: 14px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-3));
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+}
+.step h3 { margin: 0 0 8px; font-size: 16.5px; }
+.step p  { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.6; }
+
+.feats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+.feat {
+  padding: 22px 20px 24px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, .02);
+  text-align: left;
+  transition: border-color .2s, transform .2s, background .2s;
+}
+.feat:hover {
+  border-color: rgba(124, 92, 255, .45);
+  background: rgba(124, 92, 255, .06);
+  transform: translateY(-3px);
+}
+.feat-ico { display: block; margin-bottom: 12px; font-size: 24px; }
+.feat h3  { margin: 0 0 7px; font-size: 15.5px; }
+.feat p   { margin: 0; color: var(--muted); font-size: 13.5px; line-height: 1.6; }
+
+.cta {
+  width: 100%;
+  max-width: 1040px;
+  margin: clamp(46px, 7vh, 84px) auto 0;
+  padding: clamp(30px, 4vw, 46px) clamp(20px, 4vw, 40px);
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) + 6px);
+  background:
+    radial-gradient(120% 160% at 50% -30%, rgba(124, 92, 255, .28), transparent 60%),
+    var(--panel);
+  text-align: center;
+}
+.cta-title { margin: 0; font-size: clamp(21px, 3vw, 30px); }
+.cta .btn  { margin-top: 18px; }
+
+@media (max-width: 900px) {
+  .flow-grid  { grid-template-columns: 1fr; }
+  .feats-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 560px) {
+  .feats-grid { grid-template-columns: 1fr; }
+}
+
 /* ---------- toast ---------- */
 .toast {
   position: fixed;

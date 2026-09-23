@@ -72,6 +72,27 @@
       "chip.palette": "Palette Generator",
 
       "foot.built": "Built with <strong>Ollama</strong> &amp; <strong>qwen2.5-coder</strong>.",
+
+      "flow.title": "How it works",
+      "flow.s1.t": "Describe it",
+      "flow.s1.d": "Write one sentence about the app you want.",
+      "flow.s2.t": "Generate",
+      "flow.s2.d": "Your model writes a complete, self-contained app.",
+      "flow.s3.t": "Refine and export",
+      "flow.s3.d": "Chat to adjust it, then download the file or a ZIP.",
+
+      "feats.title": "Built for makers",
+      "feats.a.t": "Runs on this machine",
+      "feats.a.d": "Ollama runs locally; free cloud AI only assists in the background.",
+      "feats.b.t": "One file",
+      "feats.b.d": "HTML, CSS and JavaScript in a single self-contained file.",
+      "feats.c.t": "Live preview",
+      "feats.c.d": "Watch the app render while the code streams in.",
+      "feats.d.t": "Four languages",
+      "feats.d.d": "English, Malay, Indonesian and Simplified Chinese.",
+
+      "cta.title": "Describe your app",
+      "cta.btn": "Start writing",
       "privacy.cloud": "Models are chosen automatically: free cloud AI first, the local Ollama model as a fallback when the cloud rate-limits. <strong>Your prompt may be sent to a third-party AI provider</strong> \u2014 never include secrets or sensitive data.",
       "privacy.local": "For now all inference runs on this server (local Ollama). Once a free cloud API is connected, prompts may be sent to a third-party AI provider \u2014 <strong>never include secrets or sensitive data</strong>.",
 
@@ -178,6 +199,27 @@
       "chip.palette": "Penjana Palet",
 
       "foot.built": "Dibina dengan <strong>Ollama</strong> &amp; <strong>qwen2.5-coder</strong>.",
+
+      "flow.title": "Cara ia berfungsi",
+      "flow.s1.t": "Terangkan",
+      "flow.s1.d": "Tulis satu ayat tentang app yang anda mahu.",
+      "flow.s2.t": "Jana",
+      "flow.s2.d": "Model anda menulis app lengkap yang berdiri sendiri.",
+      "flow.s3.t": "Perhalus dan eksport",
+      "flow.s3.d": "Berbual untuk menyelaras, kemudian muat turun fail atau ZIP.",
+
+      "feats.title": "Dibina untuk pembina",
+      "feats.a.t": "Berjalan pada mesin ini",
+      "feats.a.d": "Ollama berjalan secara lokal; AI awan percuma hanya membantu di latar belakang.",
+      "feats.b.t": "Satu fail",
+      "feats.b.d": "HTML, CSS dan JavaScript dalam satu fail lengkap.",
+      "feats.c.t": "Pratonton langsung",
+      "feats.c.d": "Lihat app dirender semasa kode mengalir masuk.",
+      "feats.d.t": "Empat bahasa",
+      "feats.d.d": "Inggeris, Melayu, Indonesia dan Cina Ringkas.",
+
+      "cta.title": "Terangkan app anda",
+      "cta.btn": "Mula menulis",
       "privacy.cloud": "Model dipilih secara automatik: perkhidmatan AI awan percuma dahulu, model tempatan (Ollama) sebagai sandaran apabila awan mencapai had laju. <strong>Prompt anda mungkin dihantar kepada pembekal AI pihak ketiga</strong> \u2014 jangan masukkan rahsia atau data sensitif.",
       "privacy.local": "Buat masa ini semua inferens berjalan pada pelayan ini (Ollama tempatan). Bila API awan percuma dipasang, prompt mungkin dihantar kepada pembekal AI pihak ketiga \u2014 <strong>jangan masukkan rahsia atau data sensitif</strong>.",
 
@@ -284,6 +326,27 @@
       "chip.palette": "Generator Palet",
 
       "foot.built": "Dibangun dengan <strong>Ollama</strong> &amp; <strong>qwen2.5-coder</strong>.",
+
+      "flow.title": "Cara kerjanya",
+      "flow.s1.t": "Jelaskan",
+      "flow.s1.d": "Tulis satu kalimat tentang app yang Anda mau.",
+      "flow.s2.t": "Hasilkan",
+      "flow.s2.d": "Model Anda menulis app lengkap yang berdiri sendiri.",
+      "flow.s3.t": "Sempurnakan dan ekspor",
+      "flow.s3.d": "Chat untuk menyesuaikan, lalu unduh file atau ZIP.",
+
+      "feats.title": "Dibangun untuk pembuat",
+      "feats.a.t": "Berjalan di mesin ini",
+      "feats.a.d": "Ollama berjalan lokal; AI cloud gratis hanya membantu di latar belakang.",
+      "feats.b.t": "Satu file",
+      "feats.b.d": "HTML, CSS, dan JavaScript dalam satu file lengkap.",
+      "feats.c.t": "Pratinjau langsung",
+      "feats.c.d": "Lihat app dirender saat kode mengalir masuk.",
+      "feats.d.t": "Empat bahasa",
+      "feats.d.d": "Inggris, Melayu, Indonesia, dan Tionghoa Sederhana.",
+
+      "cta.title": "Jelaskan app Anda",
+      "cta.btn": "Mulai menulis",
       "privacy.cloud": "Model dipilih otomatis: layanan AI cloud gratis dahulu, model lokal (Ollama) sebagai cadangan saat cloud kena batas. <strong>Prompt kamu bisa dikirim ke penyedia AI pihak ketiga</strong> \u2014 jangan masukkan rahasia atau data sensitif.",
       "privacy.local": "Sementara semua inference berjalan di server ini (Ollama lokal). Begitu API cloud gratis terpasang, prompt bisa dikirim ke penyedia AI pihak ketiga \u2014 <strong>jangan masukkan rahasia atau data sensitif</strong>.",
 
@@ -356,6 +419,26 @@
 
     /* ========================= 简体中文 ========================= */
     "zh-CN": {
+      "flow.title": "工作原理",
+      "flow.s1.t": "描述",
+      "flow.s1.d": "用一句话描述你想要的应用。",
+      "flow.s2.t": "生成",
+      "flow.s2.d": "你的模型会写出一个完整的独立应用。",
+      "flow.s3.t": "修改并导出",
+      "flow.s3.d": "通过聊天调整，然后下载文件或 ZIP。",
+
+      "feats.title": "为创作者打造",
+      "feats.a.t": "在本机运行",
+      "feats.a.d": "Ollama 在本地运行；免费云端 AI 仅在后台协助。",
+      "feats.b.t": "单个文件",
+      "feats.b.d": "HTML、CSS 与 JavaScript 都在一个自包含文件中。",
+      "feats.c.t": "实时预览",
+      "feats.c.d": "代码流式输出时即可看到应用渲染。",
+      "feats.d.t": "四种语言",
+      "feats.d.d": "英语、马来语、印尼语和简体中文。",
+
+      "cta.title": "描述你的应用",
+      "cta.btn": "开始编写",
       "doc.title": "PromptCraft \u2014 \u628a\u4f60\u7684\u60f3\u6cd5\u53d8\u6210\u5e94\u7528",
       "doc.desc": "\u63cf\u8ff0\u4f60\u60f3\u8981\u7684\u5e94\u7528\uff0c\u672c\u5730 Ollama \u6a21\u578b\u4f1a\u76f4\u63a5\u5199\u51fa\u4ee3\u7801\u5e76\u7acb\u5373\u663e\u793a\u3002",
 

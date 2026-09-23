@@ -46,7 +46,7 @@
     home: $("home"), workspace: $("workspace"),
     prompt: $("prompt"), generateBtn: $("generateBtn"),
     modelSelect: $("modelSelect"), charCount: $("charCount"), homeNote: $("homeNote"),
-    chips: $("chips"),
+    chips: $("chips"), ctaStart: $("ctaStart"),
     engineDot: $("engineDot"), engineLabel: $("engineLabel"),
     backBtn: $("backBtn"), wsTitle: $("wsTitle"),
     status: $("status"), statusSpinner: $("statusSpinner"), statusText: $("statusText"),
@@ -596,6 +596,13 @@
   }
 
   el.generateBtn.addEventListener("click", generate);
+  // CTA di bawah kandungan: kembali ke muka depan, fokuskan kotak prompt
+  if (el.ctaStart) el.ctaStart.addEventListener("click", () => {
+    showWorkspace(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    el.prompt.focus({ preventScroll: true });
+    el.prompt.scrollIntoView({ behavior: "smooth", block: "center" });
+  });
   el.prompt.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); generate(); }
   });
