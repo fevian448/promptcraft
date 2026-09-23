@@ -65,3 +65,7 @@ Thumbs.db
 *.log
 *.tmp
 .cache/
+
+# --- Kelayakan Wrangler/Cloudflare: JANGAN masuk repo (repo ni awam) ---
+# `.wrangler/` menyimpan config OAuth + cache selepas `wrangler login`.
+.wrangler/

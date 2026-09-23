@@ -34,7 +34,7 @@ jobs:
       - name: Sintaks JS (node --check)
         run: |
           set -euo pipefail
-          for f in app.js chips.js zip.js site-config.js i18n.js proxy/server.js tests/zip.test.js tests/dom-refs.test.js tests/i18n.test.js; do
+          for f in app.js chips.js zip.js site-config.js i18n.js proxy/server.js worker/worker.js tests/zip.test.js tests/dom-refs.test.js tests/i18n.test.js; do
             if [ ! -f "$f" ]; then
               echo "::error::fail hilang: $f"
               exit 1

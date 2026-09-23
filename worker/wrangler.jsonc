@@ -1,0 +1,36 @@
+{
+  // PromptCraft AI Worker — konfigurasi Wrangler v4 (sudah terpasang: 4.136.2)
+  // Deploy dari mesin ini:  cd worker && wrangler deploy
+  // AUTH_TOKEN BUKAN di sini — ia `wrangler secret put AUTH_TOKEN`.
+  //   (Repo ini PUBLIK: apa sahaja yang di-commit boleh dibaca.)
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "promptcraft-ai",
+  "main": "worker.js",
+  "compatibility_date": "2026-09-01",
+
+  // izinkan https://promptcraft-ai.<subdomain>.workers.dev
+  // (subdomain ditetapkan sekali semasa login pertama)
+  "workers_dev": true,
+
+  // kontrak dgn proxy/server.js: ia memanggil REMOTE_BASE_URL + "chat/completions"
+  // jadi Worker mesti men terima laluan tu (lihat worker.js)
+  "routes": [],
+
+  // Model utama. Pilihan bebas dalam katalog Workers AI (65 model):
+  //   @cf/qwen/qwen2.5-coder-32b-instruct  <- kod, 32.8K konteks (LALAI)
+  //   @cf/zai-org/glm-5.2                  <- "flagship agentic coding"
+  //   @cf/openai/gpt-oss-120b
+  // Tukar di sini, kemudian `wrangler deploy` semula.
+  "vars": {
+    "MODEL": "@cf/qwen/qwen2.5-coder-32b-instruct"
+  },
+
+  // pemberian env.AI — TANPA ini, env.AI.run akan gagal
+  "ai": {
+    "binding": "AI"
+  },
+
+  "observability": {
+    "enabled": true
+  }
+}
