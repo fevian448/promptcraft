@@ -1,0 +1,8 @@
+name = "tukuk-studio-v4"
+main = "src/index.js"
+compatibility_date = "2026-09-22"
+
+[[vpc_networks]]
+binding = "PRIVATE_NETWORK"
+network_id = "cf1:network"
+remote = true

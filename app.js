@@ -15,14 +15,22 @@
     "You are PromptCraft, an expert front-end engineer that generates web apps.",
     "You always answer with ONE complete, self-contained HTML document.",
     "",
-    "Hard rules:",
+    "RULE 0 — THE USER'S REQUEST WINS.",
+    "The user's requirements outrank every default and every rule below.",
+    "Satisfy ALL of them: features, layout, wording, language and colours.",
+    "Where the request is silent, fall back to the defaults below.",
+    "Never swap the user's idea for your own, and never apply a default that",
+    "contradicts something the user explicitly asked for.",
+    "",
+    "Hard rules (defaults — the user overrides them):",
     "1. Everything must live in that single file: inline <style> and inline <script>.",
     "2. Never use external resources: no CDN, no <link>, no import/export, no fetch to other origins, no images from the network (use emoji, gradients, CSS shapes or inline SVG instead).",
     "3. The app must work offline when opened directly from a file.",
-    "4. Make it responsive and visually polished: modern dark UI, sensible spacing, clear hierarchy, hover/focus states.",
-    "5. The app must actually work — implement real logic, not placeholders. Persist state in localStorage only if the app needs it.",
-    "6. Reply with ONLY the code inside a ```html fenced block. No explanations, no commentary before or after.",
-    "7. Never truncate. Always close </script>, </style>, </body> and </html>."
+    "4. Styling default: if the user does not specify a look, use a modern dark UI with sensible spacing, clear hierarchy, and hover/focus states. If the user DOES specify a look — light, pastel, colourful, a hex value, a brand, print-style — follow their choice exactly instead of this default.",
+    "5. Language default: write every visible string in the app — headings, buttons, labels, placeholders, tooltips — in the language the user wrote their request in.",
+    "6. The app must actually work — implement real logic, not placeholders. Persist state in localStorage only if the app needs it.",
+    "7. Reply with ONLY the code inside a ```html fenced block. No explanations, no commentary before or after.",
+    "8. Never truncate. Always close </script>, </style>, </body> and </html>."
   ].join("\n");
 
   const NUM_PREDICT = 6000;     // 3000 ternyata kurang → output sering terpotong di tengah
@@ -497,8 +505,16 @@
       else el.wsTitle.textContent = idea;
       el.wsTitle.title = idea;
 
-      // trim riwayat supaya konteks model tetap muat
-      if (state.messages.length > 12) state.messages = state.messages.slice(-12);
+      // trim riwayat supaya konteks model tetap muat — tetapi JANGAN buang
+      // system prompt. mesej[0] ialah SYSTEM_PROMPT; dahulu slice(-12)
+      // membuangnya bila panjang mencecah 13 (≈ pusingan keenam), lalu model
+      // beroperasi TANPA sebarang peraturan dan bebas menghasilkan apa sahaja.
+      if (state.messages.length > 12) {
+        const sys = (state.messages[0] && state.messages[0].role === "system")
+          ? state.messages[0] : null;
+        const rest = state.messages.slice(sys ? 1 : 0);
+        state.messages = sys ? [sys].concat(rest.slice(-11)) : rest.slice(-12);
+      }
 
     } catch (err) {
       if (err.name === "AbortError") {
@@ -528,8 +544,21 @@
     }
   }
 
+  const LANG_NAME = {
+    en: "English", ms: "Bahasa Melayu", id: "Bahasa Indonesia", "zh-CN": "Simplified Chinese"
+  };
+
   function buildUserPrompt(idea) {
-    return `Create this web app:\n\n${idea.trim()}`;
+    const lang = LANG_NAME[currentLang()] || "English";
+    return [
+      "Create this web app.",
+      "",
+      "The user's requirements below are MANDATORY. Satisfy every one of them,",
+      "and do not add anything they did not ask for:",
+      idea.trim(),
+      "",
+      "Write every visible string in the generated app in " + lang + "."
+    ].join("\n");
   }
 
   /* ============================================================
